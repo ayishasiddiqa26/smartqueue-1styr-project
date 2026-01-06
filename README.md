@@ -1,4 +1,6 @@
-# XeroQ - Campus Print Queue Management System
+🔗 **Live Website:** **https://smartqueue-e53e2.web.app/**
+
+# XeroQ – Campus Print Queue Management System
 
 A modern web application for managing print queues in educational institutions. Students can submit print jobs and track their status, while administrators can manage the queue and handle pickups.
 
