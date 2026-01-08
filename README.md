@@ -1,3 +1,5 @@
+🔗 **Live Website:** **https://smartqueue-e53e2.web.app/**
+
 # XeroQ - AI-Powered Campus Print Queue Management System
 
 A modern, intelligent web application for managing print queues in educational institutions. Features AI-powered printer assignment, simulated payment system, and comprehensive queue optimization for hackathon demonstrations.
@@ -203,7 +205,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - **Issues**: Create an issue in the GitHub repository
 - **Documentation**: Check the `/docs` folder for detailed guides
-- **Demo**: Live demo available at [your-deployment-url]
+- **Demo**: Live demo available at https://smartqueue-e53e2.web.app
 
 ## 🎉 Acknowledgments
 
