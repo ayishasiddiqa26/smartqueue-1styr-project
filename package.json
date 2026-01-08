@@ -13,7 +13,9 @@
     "deploy:hosting": "npm run build && npx firebase-tools deploy --only hosting",
     "firebase:init": "npx firebase-tools init",
     "firebase:serve": "npm run build && npx firebase-tools serve",
-    "restore-config": "node restore-config.js"
+    "restore-config": "node restore-config.js",
+    "config:real": "node switch-config.js real",
+    "config:placeholder": "node switch-config.js placeholder"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

@@ -22,6 +22,18 @@ export interface PrintJob {
   studentComment?: string; // Optional comment from student
   adminComments?: AdminComment[]; // Comments from admin
   requiresStudentAction?: boolean; // Flag to indicate student needs to take action
+  // Payment fields for hackathon demo
+  isPaid: boolean; // Payment status (required for queue priority)
+  paymentAmount?: number | null; // Demo amount in rupees
+  paymentTimestamp?: Date | null; // When payment was completed
+  paymentId?: string | null; // Demo payment reference ID
+  
+  // AI-powered printer assignment and optimization
+  assignedPrinter?: 'printer1' | 'printer2'; // AI-assigned printer
+  aiEstimatedWait?: number; // AI-calculated wait time in minutes
+  aiPriorityLevel?: 'High' | 'Medium' | 'Low'; // AI-determined priority
+  aiReasoning?: string; // AI explanation for assignment
+  aiConfidence?: number; // AI confidence level (0-100%)
 }
 
 export interface AdminComment {

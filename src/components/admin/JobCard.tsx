@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle, Printer, Package, User, Copy, Zap, QrCode, Palette, Eye, Download, FileText, MessageSquare } from 'lucide-react';
+import { Clock, CheckCircle, Printer, Package, User, Copy, Zap, QrCode, Palette, Eye, Download, FileText, MessageSquare, IndianRupee, CreditCard, Bot, Target } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,12 +49,13 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
   const StatusIcon = status.icon;
   const timeSlot = TIME_SLOTS.find(t => t.id === job.timeSlot);
 
-  // Debug logging
+  // Debug logging for student comments
   console.log('JobCard received job:', {
     id: job.id,
     studentId: job.studentId,
     studentEmail: job.studentEmail,
-    fileName: job.fileName
+    fileName: job.fileName,
+    studentComment: job.studentComment ? `"${job.studentComment}"` : 'NO COMMENT'
   });
 
   // File handling functions (commented out - no file storage)
@@ -115,6 +116,21 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
                 Action Required
               </Badge>
             )}
+            {job.isPaid && (
+              <Badge className="bg-success/10 text-success border-success/30">
+                <IndianRupee className="h-3 w-3 mr-1" />
+                Paid
+              </Badge>
+            )}
+            {job.aiPriorityLevel && (
+              <Badge 
+                variant={job.aiPriorityLevel === 'High' ? 'default' : job.aiPriorityLevel === 'Medium' ? 'secondary' : 'outline'}
+                className="bg-primary/10 text-primary border-primary/30"
+              >
+                <Target className="h-3 w-3 mr-1" />
+                {job.aiPriorityLevel} AI Priority
+              </Badge>
+            )}
             {job.priority === 'urgent' && (
               <Badge className="bg-accent text-accent-foreground">
                 <Zap className="h-3 w-3 mr-1" />
@@ -129,7 +145,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
         </div>
 
         {/* Student Comment */}
-        {job.studentComment && (
+        {job.studentComment && job.studentComment.trim() !== '' && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start gap-2">
               <MessageSquare className="h-4 w-4 text-blue-600 mt-0.5" />
@@ -208,6 +224,56 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
           
           {/* Enhanced Job Details */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* AI Printer Assignment */}
+            {job.assignedPrinter && (
+              <div className="flex items-center gap-2 bg-primary/10 border-primary/30 rounded-lg p-3 border">
+                <div className="bg-primary/20 p-2 rounded-full">
+                  <Bot className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">AI Assignment</p>
+                  <p className="font-bold text-sm text-primary">
+                    {job.assignedPrinter === 'printer1' ? 'Printer 1' : 'Printer 2'}
+                  </p>
+                  {job.aiEstimatedWait && (
+                    <p className="text-xs text-muted-foreground">
+                      ~{job.aiEstimatedWait} min wait
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Payment Status */}
+            <div className={`flex items-center gap-2 rounded-lg p-3 border ${
+              job.isPaid 
+                ? 'bg-success/10 border-success/30' 
+                : 'bg-warning/10 border-warning/30'
+            }`}>
+              <div className={`p-2 rounded-full ${
+                job.isPaid ? 'bg-success/20' : 'bg-warning/20'
+              }`}>
+                {job.isPaid ? (
+                  <IndianRupee className="h-4 w-4 text-success" />
+                ) : (
+                  <CreditCard className="h-4 w-4 text-warning" />
+                )}
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Payment</p>
+                <p className={`font-bold text-sm ${
+                  job.isPaid ? 'text-success' : 'text-warning'
+                }`}>
+                  {job.isPaid ? `₹${job.paymentAmount}` : 'Unpaid'}
+                </p>
+                {job.isPaid && (
+                  <p className="text-xs text-muted-foreground">
+                    ID: {job.paymentId?.slice(-6)}
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Copies */}
             <div className="flex items-center gap-2 bg-white/50 rounded-lg p-3 border">
               <div className="bg-blue-100 p-2 rounded-full">
@@ -268,6 +334,27 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
               </div>
             </div>
           </div>
+
+          {/* AI Reasoning Section */}
+          {job.aiReasoning && (
+            <div className="mt-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Bot className="h-4 w-4 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-primary">AI Assignment Reasoning</p>
+                  <p className="text-sm text-primary/80 mt-1">{job.aiReasoning}</p>
+                  {job.aiConfidence && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-xs text-muted-foreground">Confidence:</span>
+                      <Badge variant="outline" className="text-xs">
+                        {job.aiConfidence}%
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between">
@@ -290,28 +377,52 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
               studentEmail={job.studentEmail || job.studentId} 
             />
             {status.nextAction && status.nextStatus && (
-              <Button
-                size="sm"
-                onClick={() => onUpdateStatus(job.id, status.nextStatus!)}
-                variant={job.status === 'printed' ? 'default' : 'secondary'}
-              >
-                {job.status === 'printed' && <CheckCircle className="h-4 w-4 mr-1" />}
-                {status.nextAction}
-              </Button>
+              <>
+                {job.status === 'printed' ? (
+                  // For printed jobs, require QR verification instead of direct pickup
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Use QR Verifier above</p>
+                      <p className="text-xs text-primary font-medium">↑ Scan QR or Enter Code</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled
+                      variant="outline"
+                      className="opacity-50 cursor-not-allowed"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Requires Verification
+                    </Button>
+                  </div>
+                ) : (
+                  // For other statuses, allow direct action
+                  <Button
+                    size="sm"
+                    onClick={() => onUpdateStatus(job.id, status.nextStatus!)}
+                    variant="secondary"
+                  >
+                    {status.nextAction}
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {/* Additional info for printed jobs */}
         {job.status === 'printed' && (
-          <div className="mt-3 p-3 bg-success/5 border border-success/20 rounded-lg">
-            <div className="flex items-center gap-2 text-success text-sm font-medium">
-              <Package className="h-4 w-4" />
-              Ready for Student Pickup
+          <div className="mt-3 p-3 bg-blue/5 border border-blue/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-blue-600 text-sm font-medium">
+                <Package className="h-4 w-4" />
+                Ready for Student Pickup
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <QrCode className="h-3 w-3" />
+                Code: <strong>{job.qrCode}</strong>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Student will show this QR code for verification
-            </p>
           </div>
         )}
       </CardContent>

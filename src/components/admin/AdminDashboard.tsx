@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import JobCard from './JobCard';
 import QRVerifier from './QRVerifier';
+import AIStatus from '../AIStatus';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { TIME_SLOTS } from '@/types/printJob';
 
@@ -23,7 +24,12 @@ const AdminDashboard: React.FC = () => {
   // Keep jobs in their original order, only sort by priority and creation time
   // Do NOT reorder based on status to prevent jobs from moving around
   const sortedActiveJobs = activeJobs.sort((a, b) => {
-    // First by job priority (urgent first)
+    // First by payment status (paid jobs first)
+    if (a.isPaid !== b.isPaid) {
+      return a.isPaid ? -1 : 1;
+    }
+    
+    // Then by job priority (urgent first)
     if (a.priority !== b.priority) {
       return a.priority === 'urgent' ? -1 : 1;
     }
@@ -34,7 +40,12 @@ const AdminDashboard: React.FC = () => {
 
   // Ready jobs are printed jobs sorted the same way
   const readyJobs = printed.sort((a, b) => {
-    // First by job priority (urgent first)
+    // First by payment status (paid jobs first)
+    if (a.isPaid !== b.isPaid) {
+      return a.isPaid ? -1 : 1;
+    }
+    
+    // Then by job priority (urgent first)
     if (a.priority !== b.priority) {
       return a.priority === 'urgent' ? -1 : 1;
     }
@@ -84,6 +95,11 @@ const AdminDashboard: React.FC = () => {
       {/* QR Verifier */}
       <div className="mb-6">
         <QRVerifier />
+      </div>
+
+      {/* AI Status */}
+      <div className="mb-6">
+        <AIStatus />
       </div>
 
       {/* Job Tabs */}

@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileUpload from './FileUpload';
 import PrintOptions from './PrintOptions';
 import QueueStatus from './QueueStatus';
+import PaymentDialog from './PaymentDialog';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -13,7 +14,7 @@ import { Priority, PrintColor, TIME_SLOTS } from '@/types/printJob';
 
 const StudentDashboard: React.FC = () => {
   const { userId, user } = useAuth();
-  const { addJob, getJobsByStudent } = usePrintQueue();
+  const { addJob, getJobsByStudent, updateJobPayment, isLoading, forceRefresh, manualFetchJobs } = usePrintQueue();
   const { toast } = useToast();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -24,11 +25,10 @@ const StudentDashboard: React.FC = () => {
   const [timeSlot, setTimeSlot] = useState(TIME_SLOTS[0].id);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('submit');
+  const [paymentDialogJob, setPaymentDialogJob] = useState<any>(null);
 
   const myJobs = getJobsByStudent(userId || '');
-  
-  console.log('StudentDashboard - userId:', userId);
-  console.log('StudentDashboard - myJobs:', myJobs);
 
   const handleFileSelect = (file: File, pageCount: number) => {
     setSelectedFile(file);
@@ -51,12 +51,21 @@ const StudentDashboard: React.FC = () => {
       return;
     }
 
+    if (!userId || !user?.email) {
+      toast({
+        title: "Authentication Error",
+        description: "Please log in again to submit a print job",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
       console.log('Submitting job with parameters:', {
-        userId: userId || 'anonymous',
-        email: user?.email || 'unknown@email.com',
+        userId: userId,
+        email: user.email,
         fileName: selectedFile.name,
         fileSize: selectedFile.size,
         pageCount: selectedFilePageCount,
@@ -64,13 +73,13 @@ const StudentDashboard: React.FC = () => {
         color,
         priority,
         timeSlot,
-        comment: comment.trim()
+        comment: comment.trim() ? `"${comment.trim()}"` : 'NO COMMENT'
       });
 
       // Submit job without file upload - just store file information
       const job = await addJob(
-        userId || 'anonymous',
-        user?.email || 'unknown@email.com',
+        userId,
+        user.email,
         selectedFile.name,
         selectedFile.size,
         '', // No file URL - just store file info
@@ -79,7 +88,7 @@ const StudentDashboard: React.FC = () => {
         color || 'black-white',
         priority,
         timeSlot,
-        comment.trim() || undefined
+        comment.trim() || undefined // Make sure we pass undefined for empty comments
       );
 
       console.log('Job submitted successfully:', job);
@@ -94,8 +103,18 @@ const StudentDashboard: React.FC = () => {
 
       toast({
         title: "Print Job Submitted! 🎉",
-        description: `Your 4-digit pickup code is: ${job.qrCode}`,
+        description: `Your 4-digit pickup code is: ${job.qrCode}. Complete payment to prioritize your job.`,
       });
+
+      // Show payment dialog immediately after submission
+      setPaymentDialogJob(job);
+
+      // Switch to queue status tab to show the new job
+      setTimeout(() => {
+        setActiveTab('status');
+        forceRefresh();
+        manualFetchJobs();
+      }, 500);
     } catch (error) {
       setIsSubmitting(false);
       console.error('Error submitting job:', error);
@@ -106,7 +125,30 @@ const StudentDashboard: React.FC = () => {
       });
       toast({
         title: "Submission Failed",
-        description: `Failed to submit print job: ${error.message || 'Unknown error'}`,
+        description: `${error.message || 'Unknown error occurred. Please try again.'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentId: string, amount: number) => {
+    if (!paymentDialogJob) return;
+    
+    try {
+      await updateJobPayment(paymentDialogJob.id, paymentId, amount);
+      
+      toast({
+        title: "Payment Successful! ✅",
+        description: `Your job has been prioritized in the queue. Payment ID: ${paymentId}`,
+      });
+      
+      setPaymentDialogJob(null);
+      forceRefresh();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast({
+        title: "Payment Update Failed",
+        description: "Payment was processed but job status update failed. Please contact admin.",
         variant: "destructive",
       });
     }
@@ -114,7 +156,7 @@ const StudentDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
-      <Tabs defaultValue="submit" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-6">
           <TabsTrigger value="submit" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
@@ -139,9 +181,8 @@ const StudentDashboard: React.FC = () => {
               <FileUpload
                 onFileSelect={handleFileSelect}
                 selectedFile={selectedFile}
-                selectedFilePageCount={selectedFilePageCount}
-                onClear={handleClearFile}
-                isUploading={isSubmitting}
+                pageCount={selectedFilePageCount}
+                onClearFile={handleClearFile}
               />
             </CardContent>
           </Card>
@@ -184,9 +225,27 @@ const StudentDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="status">
-          <QueueStatus jobs={myJobs} />
+          <QueueStatus 
+            jobs={myJobs} 
+            isLoading={isLoading} 
+            onRefresh={() => {
+              forceRefresh();
+              manualFetchJobs();
+            }}
+            onPaymentClick={setPaymentDialogJob}
+          />
         </TabsContent>
       </Tabs>
+
+      {/* Payment Dialog */}
+      {paymentDialogJob && (
+        <PaymentDialog
+          job={paymentDialogJob}
+          isOpen={!!paymentDialogJob}
+          onClose={() => setPaymentDialogJob(null)}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 };

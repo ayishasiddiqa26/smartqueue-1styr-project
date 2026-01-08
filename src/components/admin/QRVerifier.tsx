@@ -18,10 +18,15 @@ const QRVerifier: React.FC = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [scannedJob, setScannedJob] = useState<PrintJob | null>(null);
-  const { getJobByQrCode, updateJobStatus } = usePrintQueue();
+  const { getJobByQrCode, updateJobStatus, getAllJobs } = usePrintQueue();
   const { toast } = useToast();
   const verifiedStudentName = useStudentName(verifiedJob);
   const scannedStudentName = useStudentName(scannedJob);
+
+  // Check for printed jobs waiting for pickup
+  const allJobs = getAllJobs();
+  const printedJobs = allJobs.filter(job => job.status === 'printed');
+  const hasPrintedJobs = printedJobs.length > 0;
 
   const handleVerify = () => {
     const job = getJobByQrCode(code);
@@ -93,12 +98,25 @@ const QRVerifier: React.FC = () => {
 
   return (
     <>
-      <Card>
+      <Card className={hasPrintedJobs ? "border-2 border-blue-300 bg-blue-50/50 shadow-lg" : ""}>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <QrCode className="h-4 w-4" />
-            Verify Pickup
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <QrCode className="h-4 w-4" />
+              Verify Pickup
+              {hasPrintedJobs && (
+                <Badge className="bg-blue-500 text-white animate-pulse">
+                  {printedJobs.length} Ready
+                </Badge>
+              )}
+            </CardTitle>
+            {hasPrintedJobs && (
+              <div className="text-right">
+                <p className="text-xs text-blue-600 font-medium">Jobs Ready for Pickup</p>
+                <p className="text-xs text-muted-foreground">Scan QR or enter 4-digit code</p>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Scanner and Manual Input Options */}

@@ -7,18 +7,16 @@ import { getPDFPageCount } from '@/lib/pdfUtils';
 
 interface FileUploadProps {
   onFileSelect: (file: File, pageCount: number) => void;
+  onClearFile: () => void;
   selectedFile: File | null;
-  selectedFilePageCount?: number;
-  onClear: () => void;
-  isUploading?: boolean;
+  pageCount?: number;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
   onFileSelect, 
+  onClearFile,
   selectedFile, 
-  selectedFilePageCount,
-  onClear, 
-  isUploading = false 
+  pageCount
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -73,6 +71,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
     setIsProcessing(true);
     try {
       const pageCount = await getPDFPageCount(file);
+      console.log('PDF Analysis Results:');
+      console.log('- File name:', file.name);
+      console.log('- File size:', file.size, 'bytes');
+      console.log('- Detected pages:', pageCount);
+      
       onFileSelect(file, pageCount);
       toast({
         title: "File Selected",
@@ -109,7 +112,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <div className="bg-success/10 p-3 rounded-lg">
-              {isUploading ? (
+              {isProcessing ? (
                 <Loader2 className="h-8 w-8 text-success animate-spin" />
               ) : (
                 <FileText className="h-8 w-8 text-success" />
@@ -119,24 +122,19 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <p className="font-medium truncate">{selectedFile.name}</p>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{formatFileSize(selectedFile.size)}</span>
-                {selectedFilePageCount && (
-                  <span>• {selectedFilePageCount} {selectedFilePageCount === 1 ? 'page' : 'pages'}</span>
+                {pageCount && (
+                  <span>• {pageCount} {pageCount === 1 ? 'page' : 'pages'}</span>
                 )}
               </div>
-              {isUploading && (
-                <p className="text-sm text-primary mt-1">Uploading...</p>
-              )}
             </div>
-            {!isUploading && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClear}
-                className="text-muted-foreground hover:text-destructive"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClearFile}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
         </CardContent>
       </Card>

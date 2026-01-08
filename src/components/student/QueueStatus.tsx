@@ -1,15 +1,19 @@
 import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Clock, Users, CheckCircle, Printer, Package, Eye, ExternalLink, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Clock, Users, CheckCircle, Printer, Package, Eye, ExternalLink, MessageSquare, AlertTriangle, RefreshCw, CreditCard, IndianRupee, Bot, Zap, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PrintJob, TIME_SLOTS } from '@/types/printJob';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
+import AIStatus from '../AIStatus';
 
 interface QueueStatusProps {
   jobs: PrintJob[];
+  isLoading?: boolean;
+  onRefresh?: () => void;
+  onPaymentClick?: (job: PrintJob) => void;
 }
 
 const statusConfig = {
@@ -35,9 +39,12 @@ const statusConfig = {
   },
 };
 
-const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
+const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRefresh, onPaymentClick }) => {
   const activeJobs = jobs.filter(j => j.status !== 'collected');
   const { clearStudentAction } = usePrintQueue();
+  
+  // Check if there are any unpaid jobs
+  const hasUnpaidJobs = activeJobs.some(job => !job.isPaid && job.status === 'waiting');
 
   // File viewing function (commented out - no file storage)
   /*
@@ -55,6 +62,20 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
       console.error('Error acknowledging action:', error);
     }
   };
+
+  if (isLoading) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4" />
+          <h3 className="font-medium text-foreground mb-1">Loading Queue Status...</h3>
+          <p className="text-sm text-muted-foreground">
+            Fetching your print jobs
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (activeJobs.length === 0) {
     return (
@@ -74,10 +95,51 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold flex items-center gap-2">
-        <Users className="h-5 w-5" />
-        Your Print Jobs
-      </h2>
+      {/* Priority Queue Information Banner */}
+      {hasUnpaidJobs && (
+        <Alert className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
+          <CreditCard className="h-5 w-5 text-blue-600" />
+          <AlertDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-semibold text-blue-700 mb-1">
+                  🚀 Priority Queue Available
+                </p>
+                <p className="text-sm text-blue-600">
+                  Complete payment to join the priority queue for faster processing
+                </p>
+              </div>
+              <div className="ml-4 text-right">
+                <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-blue-700">Priority Benefits:</p>
+                  <p className="text-xs text-blue-600">• Faster processing</p>
+                  <p className="text-xs text-blue-600">• Higher queue position</p>
+                  <p className="text-xs text-blue-600">• Reduced wait time</p>
+                </div>
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Your Print Jobs
+        </h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh || (() => window.location.reload())}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* AI Status Component */}
+      <AIStatus />
 
       {activeJobs.map((job) => {
         const status = statusConfig[job.status];
@@ -104,21 +166,39 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
                       {job.color === 'color' ? 'Color' : 'B&W'}
                     </span>
                   </p>
+                  {/* AI Assignment Info */}
+                  {job.assignedPrinter && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Bot className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-primary font-medium">
+                        {job.assignedPrinter === 'printer1' ? 'Printer 1' : 'Printer 2'}
+                      </span>
+                      {job.aiPriorityLevel && (
+                        <Badge 
+                          variant={job.aiPriorityLevel === 'High' ? 'default' : job.aiPriorityLevel === 'Medium' ? 'secondary' : 'outline'}
+                          className="text-xs"
+                        >
+                          <Target className="h-2 w-2 mr-1" />
+                          {job.aiPriorityLevel} Priority
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
-                  {/* Commented out until Firebase Storage is enabled
-                  {job.fileUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewFile(job.fileUrl!, job.fileName)}
-                      className="flex items-center gap-1"
-                    >
-                      <Eye className="h-3 w-3" />
-                      View
-                    </Button>
+                  {/* Payment Status - Friendly */}
+                  {job.isPaid ? (
+                    <Badge variant="default" className="bg-green-100 text-green-700 border border-green-300 font-medium">
+                      <IndianRupee className="h-3 w-3 mr-1" />
+                      Priority Queue
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-blue-300 text-blue-600 bg-blue-50 font-medium">
+                      <CreditCard className="h-3 w-3 mr-1" />
+                      Standard Queue
+                    </Badge>
                   )}
-                  */}
+                  
                   <Badge variant="outline" className={status.color}>
                     <StatusIcon className="h-3 w-3 mr-1" />
                     {status.label}
@@ -128,6 +208,79 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
             </CardHeader>
 
             <CardContent className="pt-0">
+              {/* AI Reasoning */}
+              {job.aiReasoning && (
+                <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Bot className="h-4 w-4 text-primary mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-primary">AI Assignment Reasoning</p>
+                      <p className="text-sm text-primary/80 mt-1">{job.aiReasoning}</p>
+                      {job.aiConfidence && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-muted-foreground">Confidence:</span>
+                          <Badge variant="outline" className="text-xs">
+                            {job.aiConfidence}%
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Section - Friendly & Professional */}
+              {!job.isPaid && job.status === 'waiting' && (
+                <Alert className="mb-4 border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md">
+                  <CreditCard className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="text-base font-semibold text-blue-700 mb-1">
+                        💳 Payment Available
+                      </p>
+                      <p className="text-sm text-blue-600 mb-1">
+                        Complete payment to join the priority queue
+                      </p>
+                      <p className="text-xs text-blue-500">
+                        Paid jobs receive faster processing
+                      </p>
+                    </div>
+                    {onPaymentClick && (
+                      <Button
+                        size="sm"
+                        onClick={() => onPaymentClick(job)}
+                        className="ml-3 bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 shadow-sm"
+                      >
+                        <IndianRupee className="h-4 w-4 mr-1" />
+                        Pay Now
+                      </Button>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Payment Success Info */}
+              {job.isPaid && (
+                <div className="mb-4 p-3 bg-success/10 border border-success/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-success mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-success">Payment Completed ✅</p>
+                      <div className="text-xs text-success/80 mt-1 space-y-1">
+                        <p>Amount: ₹{job.paymentAmount}</p>
+                        <p>Payment ID: {job.paymentId}</p>
+                        {job.paymentTimestamp && (
+                          <p>Paid: {new Date(job.paymentTimestamp).toLocaleString()}</p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="mt-2 text-success border-success/50">
+                        🚀 Priority Queue
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Action Required Alert */}
               {job.requiresStudentAction && (
                 <Alert className="mb-4 border-orange-200 bg-orange-50">
@@ -241,8 +394,11 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs }) => {
                           <span className="font-bold text-lg">#{job.queuePosition}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Est. Wait</span>
-                          <span className="font-medium">{job.estimatedWait} min</span>
+                          <span className="text-muted-foreground">AI Est. Wait</span>
+                          <span className="font-medium flex items-center gap-1">
+                            <Bot className="h-3 w-3 text-primary" />
+                            {job.aiEstimatedWait || job.estimatedWait} min
+                          </span>
                         </div>
                       </>
                     )}
