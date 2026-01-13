@@ -12,6 +12,8 @@ A modern, intelligent web application for managing print queues in educational i
 - **Payment System**: Simulated payment for priority queue access
 - **Real-time Tracking**: Live queue status with AI-estimated wait times
 - **Priority Benefits**: Paid jobs receive faster processing
+- **Instant Notifications**: Multi-channel alerts when jobs are ready
+- **Notification History**: Dedicated tab with complete notification management
 
 ### 👨‍💼 Admin Dashboard
 - **AI-Powered Management**: Intelligent job prioritization and printer load balancing
@@ -33,6 +35,14 @@ A modern, intelligent web application for managing print queues in educational i
 - **Flexible Pricing**: ₹2 B&W, ₹5 Color, ₹5 Urgent fee
 - **Professional UX**: Clean payment interface without threatening language
 
+### 🔔 Notification System
+- **Real-time Alerts**: Instant notifications when jobs are ready for pickup
+- **Multi-channel Delivery**: Browser notifications, toast messages, and visual alerts
+- **Notification History**: Dedicated tab with persistent notification storage
+- **Smart Management**: Mark as read/unread, clear all, and unread count badges
+- **Secure & Private**: User-specific notifications with proper authentication
+- **Professional Interface**: Clean notification cards with job details and timestamps
+
 ## 🛠 Tech Stack
 
 - **Frontend**: React + TypeScript + Vite
@@ -40,6 +50,8 @@ A modern, intelligent web application for managing print queues in educational i
 - **Backend**: Firebase (Auth, Firestore, Storage)
 - **AI Integration**: Google Gemini AI (simulated for demo)
 - **QR Processing**: @zxing/library for code scanning
+- **Notifications**: Browser Notification API + Custom toast system
+- **Date Handling**: date-fns for timestamp formatting
 - **State Management**: React hooks with real-time Firestore
 - **Security**: Environment variables and secure Firebase rules
 
@@ -54,7 +66,7 @@ A modern, intelligent web application for managing print queues in educational i
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/your-username/xeroq.git
+git clone https://github.com/ayishasiddiqa26/smartqueue-1styr-project.git
 cd xeroq
 npm install
 ```
@@ -124,6 +136,8 @@ firebase deploy --only hosting
 3. **Add Instructions**: Optional special instructions for admin
 4. **Payment**: Complete simulated payment for priority processing
 5. **Track Status**: Monitor real-time queue position and AI estimates
+6. **Receive Notifications**: Get instant alerts when jobs are ready
+7. **Manage Notifications**: View history and manage alerts in dedicated tab
 
 ### Admin Workflow
 
@@ -158,6 +172,7 @@ firebase deploy --only hosting
 ### Technical Highlights
 - **AI Integration**: Intelligent printer assignment and queue optimization
 - **Real-time Updates**: Live status tracking and notifications
+- **Notification System**: Multi-channel alerts with persistent history
 - **Scalable Architecture**: Production-ready code structure
 - **Security Best Practices**: Environment variables and secure authentication
 
@@ -188,6 +203,37 @@ Set environment variables in your hosting platform:
 - **Urgent Request**: +2 priority points
 - **Small Job (≤5 pages)**: +1 priority point
 - **Final Priority**: High (4+), Medium (2-3), Low (0-1)
+
+## 🔔 Notification System Features
+
+### Real-time Notification Delivery
+- **Trigger**: Automatic when admin marks job as "printed"
+- **Browser Notifications**: Native OS notifications with sound
+- **Toast Messages**: In-app sliding notifications
+- **Visual Alerts**: Animated popup notifications with bounce effect
+- **Multi-channel**: All three types sent simultaneously for reliability
+
+### Notification Management
+- **Dedicated Tab**: Complete notification history interface
+- **Persistent Storage**: Last 50 notifications saved per user (localStorage)
+- **Read/Unread Status**: Visual indicators and click-to-mark-read
+- **Timestamp Display**: Relative time formatting ("2 minutes ago")
+- **Bulk Actions**: Mark all as read, clear all notifications
+- **Unread Badges**: Red count indicators on notification tab
+
+### Notification Content
+```
+🖨️ Print Job Ready!
+Your document "report.pdf" is ready for pickup.
+Use 4-digit code: 1234
+2 minutes ago
+```
+
+### Security & Privacy
+- **User-specific**: Only shows notifications for authenticated student's jobs
+- **Secure Validation**: Proper job ownership verification
+- **Local Storage**: User-scoped notification history
+- **No Sensitive Data**: Only essential pickup information included
 
 ## 🤝 Contributing
 
