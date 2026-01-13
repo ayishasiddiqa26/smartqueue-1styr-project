@@ -10,7 +10,7 @@ import NotificationTab from './NotificationTab';
 import PaymentDialog from './PaymentDialog';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useNotificationHistory } from '@/hooks/useNotificationHistory';
+import { useFirestoreNotifications } from '@/hooks/useFirestoreNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Priority, PrintColor, TIME_SLOTS } from '@/types/printJob';
@@ -19,7 +19,7 @@ const StudentDashboard: React.FC = () => {
   const { userId, user } = useAuth();
   const { addJob, getJobsByStudent, updateJobPayment, isLoading, forceRefresh, manualFetchJobs } = usePrintQueue();
   const { toast } = useToast();
-  const { unreadCount } = useNotificationHistory();
+  const { unreadCount } = useFirestoreNotifications();
   
   // Initialize notification system
   useNotifications();

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PrintJob, TIME_SLOTS, PrintJobStatus } from '@/types/printJob';
 import { formatDistanceToNow } from 'date-fns';
+import { useFirestoreNotifications } from '@/hooks/useFirestoreNotifications';
 import AdminCommentDialog from './AdminCommentDialog';
 
 interface JobCardProps {
@@ -48,6 +49,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
   const status = statusConfig[job.status];
   const StatusIcon = status.icon;
   const timeSlot = TIME_SLOTS.find(t => t.id === job.timeSlot);
+  const { createNotification } = useFirestoreNotifications();
 
   // Debug logging for student comments
   console.log('JobCard received job:', {
@@ -57,6 +59,30 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
     fileName: job.fileName,
     studentComment: job.studentComment ? `"${job.studentComment}"` : 'NO COMMENT'
   });
+
+  // Handle status update with notification creation
+  const handleStatusUpdate = async (jobId: string, newStatus: PrintJobStatus) => {
+    // Update the job status first
+    onUpdateStatus(jobId, newStatus);
+    
+    // Create notification when job is marked as printed
+    if (newStatus === 'printed') {
+      const success = await createNotification(
+        job.studentId,
+        job.id,
+        `🎉 Your print job "${job.fileName}" is ready for pickup! Use your 4-digit code: ${job.qrCode}`,
+        'printed',
+        job.fileName,
+        job.qrCode
+      );
+      
+      if (success) {
+        console.log('✅ Notification sent to student for printed job');
+      } else {
+        console.error('❌ Failed to send notification to student');
+      }
+    }
+  };
 
   // File handling functions (commented out - no file storage)
   /*
@@ -399,7 +425,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus }) => {
                   // For other statuses, allow direct action
                   <Button
                     size="sm"
-                    onClick={() => onUpdateStatus(job.id, status.nextStatus!)}
+                    onClick={() => handleStatusUpdate(job.id, status.nextStatus!)}
                     variant="secondary"
                   >
                     {status.nextAction}

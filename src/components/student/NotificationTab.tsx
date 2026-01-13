@@ -4,45 +4,67 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotificationHistory, NotificationHistoryItem } from '@/hooks/useNotificationHistory';
+import { useFirestoreNotifications, FirestoreNotification } from '@/hooks/useFirestoreNotifications';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationTab: React.FC = () => {
-  const { notifications, markAsRead, markAllAsRead, clearNotifications, unreadCount } = useNotificationHistory();
+  const { notifications, markAsRead, markAllAsRead, clearNotifications, unreadCount, loading } = useFirestoreNotifications();
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'job_ready':
+  const getNotificationIcon = (status: string) => {
+    switch (status) {
+      case 'printed':
+      case 'ready':
         return <Package className="h-4 w-4 text-green-600" />;
-      case 'job_completed':
+      case 'completed':
         return <CheckCheck className="h-4 w-4 text-blue-600" />;
-      case 'payment_confirmed':
-        return <FileText className="h-4 w-4 text-purple-600" />;
       default:
         return <Bell className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const getNotificationColor = (type: string, read: boolean) => {
+  const getNotificationColor = (status: string, read: boolean) => {
     if (read) return 'border-gray-200 bg-gray-50';
     
-    switch (type) {
-      case 'job_ready':
+    switch (status) {
+      case 'printed':
+      case 'ready':
         return 'border-green-200 bg-green-50';
-      case 'job_completed':
+      case 'completed':
         return 'border-blue-200 bg-blue-50';
-      case 'payment_confirmed':
-        return 'border-purple-200 bg-purple-50';
       default:
         return 'border-gray-200 bg-white';
     }
   };
 
-  const handleNotificationClick = (notification: NotificationHistoryItem) => {
+  const handleNotificationClick = (notification: FirestoreNotification) => {
     if (!notification.read) {
       markAsRead(notification.id);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notifications
+              <Badge variant="secondary" className="ml-auto">
+                Loading...
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mb-4" />
+            <p className="text-sm text-muted-foreground">Loading notifications...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (notifications.length === 0) {
     return (
@@ -111,14 +133,14 @@ const NotificationTab: React.FC = () => {
           {notifications.map((notification) => (
             <Card
               key={notification.id}
-              className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type, notification.read)}`}
+              className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.status, notification.read)}`}
               onClick={() => handleNotificationClick(notification)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   {/* Icon */}
                   <div className="flex-shrink-0 mt-1">
-                    {getNotificationIcon(notification.type)}
+                    {getNotificationIcon(notification.status)}
                   </div>
 
                   {/* Content */}
@@ -131,10 +153,12 @@ const NotificationTab: React.FC = () => {
                         
                         {/* Job Details */}
                         <div className="mt-2 space-y-1">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <FileText className="h-3 w-3" />
-                            <span>{notification.fileName}</span>
-                          </div>
+                          {notification.jobFileName && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <FileText className="h-3 w-3" />
+                              <span>{notification.jobFileName}</span>
+                            </div>
+                          )}
                           {notification.qrCode && (
                             <div className="flex items-center gap-2 text-xs">
                               <span className="text-muted-foreground">Pickup Code:</span>

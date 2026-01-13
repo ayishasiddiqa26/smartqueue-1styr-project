@@ -32,7 +32,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet');
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
-  const { balance, deductFromWallet, hasSufficientBalance, loading: walletLoading } = useWallet();
+  const { balance, deductFromWallet, hasSufficientBalance, loading: walletLoading, error: walletError } = useWallet();
 
   const payment = calculatePaymentAmount(
     job.pageCount || 1,
@@ -49,33 +49,33 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       let result: PaymentResult;
 
       if (paymentMethod === 'wallet') {
-        console.log(`Attempting wallet payment: Amount: ₹${payment.totalAmount}, Balance: ₹${balance}`);
+        console.log(`💳 Attempting wallet payment: Amount: ₹${payment.totalAmount}, Balance: ₹${balance}`);
         
         if (!hasSufficientBalance(payment.totalAmount)) {
           result = {
             success: false,
-            message: `Insufficient wallet balance. You have ₹${balance}, but need ₹${payment.totalAmount}`,
+            message: `Insufficient wallet balance. You have ₹${balance}, but need ₹${payment.totalAmount}. Please add funds to your demo wallet.`,
           };
         } else {
-          const walletSuccess = await deductFromWallet(
+          const walletResult = await deductFromWallet(
             payment.totalAmount,
             `Print job payment - ${job.fileName}`,
             job.id
           );
           
-          if (walletSuccess) {
+          if (walletResult.success) {
             result = {
               success: true,
-              message: 'Payment successful via wallet',
+              message: walletResult.message,
               transactionId: `WALLET_${Date.now()}`,
-              remainingBalance: balance - payment.totalAmount
+              remainingBalance: walletResult.newBalance
             };
-            console.log('Wallet payment successful');
+            console.log('✅ Wallet payment successful');
           } else {
-            console.error('Wallet deduction failed');
+            console.error('❌ Wallet payment failed:', walletResult.message);
             result = {
               success: false,
-              message: 'Wallet payment failed. Please check your balance and try again.',
+              message: walletResult.message,
             };
           }
         }

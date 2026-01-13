@@ -1,13 +1,13 @@
 // Wallet management hook for student payments
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { db } from '@/firebase';
 
 export interface WalletData {
   balance: number;
   transactions: WalletTransaction[];
-  lastUpdated: Date;
+  lastUpdated: Timestamp | Date;
 }
 
 export interface WalletTransaction {
@@ -15,7 +15,7 @@ export interface WalletTransaction {
   type: 'credit' | 'debit';
   amount: number;
   description: string;
-  timestamp: Date;
+  timestamp: Timestamp | Date;
   jobId?: string;
 }
 
@@ -23,166 +23,209 @@ export const useWallet = () => {
   const { userId } = useAuth();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize wallet with ₹200 for new users
   const initializeWallet = async (userId: string): Promise<WalletData> => {
-    const initialWallet: WalletData = {
-      balance: 200, // ₹200 initial balance
+    const initialWallet = {
+      balance: 200, // ₹200 initial balance for demo
       transactions: [
         {
           id: `init_${Date.now()}`,
-          type: 'credit',
+          type: 'credit' as const,
           amount: 200,
-          description: 'Welcome bonus - Initial wallet balance',
-          timestamp: new Date()
+          description: '🎉 Welcome Bonus - Demo Wallet',
+          timestamp: Timestamp.now()
         }
       ],
-      lastUpdated: new Date()
+      lastUpdated: Timestamp.now()
     };
 
     try {
-      await setDoc(doc(db, 'wallets', userId), initialWallet);
-      console.log('Wallet initialized successfully with ₹200');
+      await setDoc(doc(db, 'users', userId, 'wallet', 'data'), initialWallet);
+      console.log('✅ Demo wallet initialized with ₹200');
+      return {
+        ...initialWallet,
+        lastUpdated: initialWallet.lastUpdated.toDate(),
+        transactions: initialWallet.transactions.map(t => ({
+          ...t,
+          timestamp: t.timestamp.toDate()
+        }))
+      };
     } catch (error) {
-      console.warn('Failed to save wallet to Firestore, using local wallet:', error);
-      // Continue with local wallet even if Firestore fails
+      console.error('❌ Failed to initialize wallet in Firestore:', error);
+      // Return local wallet as fallback
+      return {
+        balance: 200,
+        transactions: [{
+          id: `init_${Date.now()}`,
+          type: 'credit' as const,
+          amount: 200,
+          description: '🎉 Welcome Bonus - Demo Wallet',
+          timestamp: new Date()
+        }],
+        lastUpdated: new Date()
+      };
     }
-    
-    return initialWallet;
   };
 
-  // Load wallet data
+  // Real-time wallet listener
   useEffect(() => {
-    const loadWallet = async () => {
-      if (!userId) {
-        console.log('No userId, skipping wallet load');
-        setLoading(false);
-        return;
-      }
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-      console.log('Loading wallet for user:', userId);
+    console.log('🔄 Setting up wallet listener for user:', userId);
+    setLoading(true);
+    setError(null);
 
-      try {
-        const walletDoc = await getDoc(doc(db, 'wallets', userId));
-        
-        if (walletDoc.exists()) {
-          console.log('Wallet found in Firestore');
-          const data = walletDoc.data() as WalletData;
-          // Convert timestamp strings back to Date objects
-          const processedData = {
-            ...data,
-            lastUpdated: data.lastUpdated.toDate ? data.lastUpdated.toDate() : new Date(data.lastUpdated),
-            transactions: data.transactions.map(t => ({
-              ...t,
-              timestamp: t.timestamp.toDate ? t.timestamp.toDate() : new Date(t.timestamp)
-            }))
-          };
-          console.log('Wallet data loaded:', { balance: processedData.balance, transactions: processedData.transactions.length });
-          setWalletData(processedData);
-        } else {
-          console.log('No wallet found, initializing new wallet');
-          // Initialize wallet for new user
-          const newWallet = await initializeWallet(userId);
-          setWalletData(newWallet);
-        }
-      } catch (error) {
-        console.error('Error loading wallet:', error);
-        console.log('Creating fallback wallet with ₹200');
-        // Fallback to local initialization
-        const fallbackWallet: WalletData = {
-          balance: 200,
-          transactions: [
-            {
+    const walletRef = doc(db, 'users', userId, 'wallet', 'data');
+    
+    const unsubscribe = onSnapshot(
+      walletRef,
+      async (docSnapshot) => {
+        try {
+          if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            // Convert Firestore timestamps to Date objects
+            const processedData: WalletData = {
+              balance: data.balance || 200,
+              lastUpdated: data.lastUpdated instanceof Timestamp ? data.lastUpdated.toDate() : new Date(data.lastUpdated),
+              transactions: (data.transactions || []).map((t: any) => ({
+                ...t,
+                timestamp: t.timestamp instanceof Timestamp ? t.timestamp.toDate() : new Date(t.timestamp)
+              }))
+            };
+            console.log('💰 Wallet data updated:', { balance: processedData.balance, transactions: processedData.transactions.length });
+            setWalletData(processedData);
+          } else {
+            console.log('🆕 No wallet found, initializing...');
+            const newWallet = await initializeWallet(userId);
+            setWalletData(newWallet);
+          }
+        } catch (error) {
+          console.error('❌ Error processing wallet data:', error);
+          setError('Failed to load wallet data');
+          // Create fallback wallet
+          const fallbackWallet: WalletData = {
+            balance: 200,
+            transactions: [{
               id: `fallback_${Date.now()}`,
               type: 'credit',
               amount: 200,
-              description: 'Fallback wallet initialization',
+              description: '🔄 Fallback Demo Wallet',
               timestamp: new Date()
-            }
-          ],
+            }],
+            lastUpdated: new Date()
+          };
+          setWalletData(fallbackWallet);
+        } finally {
+          setLoading(false);
+        }
+      },
+      (error) => {
+        console.error('❌ Wallet listener error:', error);
+        setError('Failed to connect to wallet service');
+        setLoading(false);
+        // Create fallback wallet
+        const fallbackWallet: WalletData = {
+          balance: 200,
+          transactions: [{
+            id: `fallback_${Date.now()}`,
+            type: 'credit',
+            amount: 200,
+            description: '🔄 Offline Demo Wallet',
+            timestamp: new Date()
+          }],
           lastUpdated: new Date()
         };
         setWalletData(fallbackWallet);
       }
-      
-      setLoading(false);
-    };
+    );
 
-    loadWallet();
+    return () => {
+      console.log('🔌 Cleaning up wallet listener');
+      unsubscribe();
+    };
   }, [userId]);
 
-  // Deduct amount from wallet
-  const deductFromWallet = async (amount: number, description: string, jobId?: string): Promise<boolean> => {
+  // Deduct amount from wallet (secure server-side simulation)
+  const deductFromWallet = async (amount: number, description: string, jobId?: string): Promise<{ success: boolean; message: string; newBalance?: number }> => {
     if (!userId || !walletData) {
-      console.error('Wallet deduction failed: No user ID or wallet data');
-      return false;
+      console.error('❌ Wallet deduction failed: No user or wallet data');
+      return { success: false, message: 'Wallet not available. Please try again.' };
     }
 
     if (walletData.balance < amount) {
-      console.error(`Wallet deduction failed: Insufficient balance. Have: ${walletData.balance}, Need: ${amount}`);
-      return false;
+      console.error(`❌ Insufficient balance: Have ₹${walletData.balance}, Need ₹${amount}`);
+      return { 
+        success: false, 
+        message: `Insufficient balance. You have ₹${walletData.balance}, but need ₹${amount}. Please add funds to your demo wallet.` 
+      };
     }
 
     try {
-      const newTransaction: WalletTransaction = {
-        id: `debit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'debit',
+      console.log(`💳 Processing wallet payment: ₹${amount}`);
+      
+      const newTransaction = {
+        id: `debit_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        type: 'debit' as const,
         amount,
         description,
-        timestamp: new Date(),
+        timestamp: Timestamp.now(),
         jobId
       };
 
-      const updatedWallet: WalletData = {
-        balance: walletData.balance - amount,
-        transactions: [newTransaction, ...walletData.transactions].slice(0, 100), // Keep last 100 transactions
-        lastUpdated: new Date()
+      const newBalance = walletData.balance - amount;
+      const updatedWallet = {
+        balance: newBalance,
+        transactions: [newTransaction, ...walletData.transactions.slice(0, 99)], // Keep last 100 transactions
+        lastUpdated: Timestamp.now()
       };
 
-      // Try to update Firestore, but don't fail if it doesn't work
-      try {
-        await updateDoc(doc(db, 'wallets', userId), updatedWallet);
-        console.log('Wallet updated in Firestore successfully');
-      } catch (firestoreError) {
-        console.warn('Failed to update Firestore, but continuing with local update:', firestoreError);
-        // Continue with local update even if Firestore fails
-      }
-
-      setWalletData(updatedWallet);
-      console.log(`Wallet deduction successful: ₹${amount} deducted, new balance: ₹${updatedWallet.balance}`);
-      return true;
+      // Update Firestore
+      await updateDoc(doc(db, 'users', userId, 'wallet', 'data'), updatedWallet);
+      
+      console.log(`✅ Wallet payment successful: ₹${amount} deducted, new balance: ₹${newBalance}`);
+      return { 
+        success: true, 
+        message: `Payment successful! ₹${amount} deducted from wallet.`,
+        newBalance 
+      };
     } catch (error) {
-      console.error('Error deducting from wallet:', error);
-      return false;
+      console.error('❌ Error processing wallet payment:', error);
+      return { 
+        success: false, 
+        message: 'Payment processing failed. Please try again.' 
+      };
     }
   };
 
-  // Add amount to wallet
+  // Add amount to wallet (for demo purposes)
   const addToWallet = async (amount: number, description: string): Promise<boolean> => {
-    if (!userId || !walletData) {
-      return false;
-    }
+    if (!userId || !walletData) return false;
 
     try {
-      const newTransaction: WalletTransaction = {
-        id: `credit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        type: 'credit',
+      const newTransaction = {
+        id: `credit_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        type: 'credit' as const,
         amount,
         description,
-        timestamp: new Date()
+        timestamp: Timestamp.now()
       };
 
-      const updatedWallet: WalletData = {
+      const updatedWallet = {
         balance: walletData.balance + amount,
-        transactions: [newTransaction, ...walletData.transactions].slice(0, 100),
-        lastUpdated: new Date()
+        transactions: [newTransaction, ...walletData.transactions.slice(0, 99)],
+        lastUpdated: Timestamp.now()
       };
 
-      await updateDoc(doc(db, 'wallets', userId), updatedWallet);
-      setWalletData(updatedWallet);
+      await updateDoc(doc(db, 'users', userId, 'wallet', 'data'), updatedWallet);
+      console.log(`✅ Added ₹${amount} to wallet`);
       return true;
     } catch (error) {
-      console.error('Error adding to wallet:', error);
+      console.error('❌ Error adding to wallet:', error);
       return false;
     }
   };
@@ -190,13 +233,14 @@ export const useWallet = () => {
   // Check if wallet has sufficient balance
   const hasSufficientBalance = (amount: number): boolean => {
     const sufficient = walletData ? walletData.balance >= amount : false;
-    console.log(`Balance check: Need ₹${amount}, Have ₹${walletData?.balance || 0}, Sufficient: ${sufficient}`);
+    console.log(`💰 Balance check: Need ₹${amount}, Have ₹${walletData?.balance || 0}, Sufficient: ${sufficient}`);
     return sufficient;
   };
 
   return {
     walletData,
     loading,
+    error,
     deductFromWallet,
     addToWallet,
     hasSufficientBalance,
