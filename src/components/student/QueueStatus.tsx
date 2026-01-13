@@ -95,33 +95,6 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRe
 
   return (
     <div className="space-y-4">
-      {/* Priority Queue Information Banner */}
-      {hasUnpaidJobs && (
-        <Alert className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
-          <CreditCard className="h-5 w-5 text-blue-600" />
-          <AlertDescription>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-lg font-semibold text-blue-700 mb-1">
-                  🚀 Priority Queue Available
-                </p>
-                <p className="text-sm text-blue-600">
-                  Complete payment to join the priority queue for faster processing
-                </p>
-              </div>
-              <div className="ml-4 text-right">
-                <div className="bg-blue-100 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm font-medium text-blue-700">Priority Benefits:</p>
-                  <p className="text-xs text-blue-600">• Faster processing</p>
-                  <p className="text-xs text-blue-600">• Higher queue position</p>
-                  <p className="text-xs text-blue-600">• Reduced wait time</p>
-                </div>
-              </div>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Users className="h-5 w-5" />
@@ -228,12 +201,6 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRe
                     <div className="flex-1">
                       <p className="text-base font-semibold text-blue-700 mb-1">
                         💳 Payment Required
-                      </p>
-                      <p className="text-sm text-blue-600 mb-1">
-                        Complete payment to join the priority queue
-                      </p>
-                      <p className="text-xs text-blue-500">
-                        Paid jobs receive faster processing
                       </p>
                     </div>
                     {onPaymentClick && (
