@@ -79,18 +79,33 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             };
           }
         }
+      } else if (paymentMethod === 'pay_later') {
+        // Pay Later: Just submit the job without payment
+        result = {
+          success: true,
+          message: 'Job submitted successfully',
+          transactionId: `PAY_LATER_${Date.now()}`,
+        };
+        console.log('Job submitted with pay later option');
       } else {
+        // Card payment
         result = await simulatePaymentProcessing(payment.totalAmount, paymentMethod);
       }
 
       setPaymentResult(result);
 
       if (result.success && result.transactionId) {
-        // Wait a moment to show success, then call parent
-        setTimeout(() => {
-          onPaymentSuccess(result.transactionId!, payment.totalAmount);
+        // For pay later, submit immediately without showing success message
+        if (paymentMethod === 'pay_later') {
+          onPaymentSuccess(result.transactionId!, 0); // 0 amount for pay later
           onClose();
-        }, 2000);
+        } else {
+          // For actual payments, wait a moment to show success, then call parent
+          setTimeout(() => {
+            onPaymentSuccess(result.transactionId!, payment.totalAmount);
+            onClose();
+          }, 2000);
+        }
       }
     } catch (error) {
       setPaymentResult({
@@ -243,13 +258,17 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             <AlertDescription className={paymentResult.success ? 'text-success-foreground' : 'text-destructive-foreground'}>
               {paymentResult.success ? (
                 <>
-                  <strong>Payment Successful!</strong><br />
-                  Transaction ID: {paymentResult.transactionId}<br />
+                  <strong>
+                    {paymentMethod === 'pay_later' ? 'Job Submitted!' : 'Payment Successful!'}
+                  </strong><br />
+                  {paymentMethod !== 'pay_later' && (
+                    <>Transaction ID: {paymentResult.transactionId}<br /></>
+                  )}
                   {paymentResult.remainingBalance !== undefined && (
                     <>Wallet Balance: ₹{paymentResult.remainingBalance}<br /></>
                   )}
                   {paymentMethod === 'pay_later' ? 
-                    'Job submitted - payment can be completed later.' :
+                    'Your job has been submitted to the queue. You can pay later for priority processing.' :
                     'Your job will be prioritized in the queue.'
                   }
                 </>
