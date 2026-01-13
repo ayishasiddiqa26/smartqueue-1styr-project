@@ -13,8 +13,63 @@ const LoginForm: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [activeTab, setActiveTab] = useState('student');
-  const { login, register, loading } = useAuth();
+  const { login, register, logout, loading, isAuthenticated, role, proceedToDashboard } = useAuth();
   const { toast } = useToast();
+
+  // If user is already authenticated, show continue option
+  if (isAuthenticated && role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/5 via-background to-accent/5">
+        <Card className="w-full max-w-md shadow-xl border-0">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto bg-primary/10 p-4 rounded-full w-fit mb-4">
+              <svg 
+                viewBox="0 0 24 24" 
+                className="h-12 w-12 text-primary"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <rect x="6" y="2" width="12" height="6" rx="1" />
+                <rect x="4" y="8" width="16" height="10" rx="1" />
+                <path d="M8 18v4h8v-4" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+                <line x1="8" y1="15" x2="12" y2="15" />
+              </svg>
+            </div>
+            <CardTitle className="text-2xl font-bold">Welcome Back!</CardTitle>
+            <CardDescription>
+              You're logged in as {role === 'admin' ? 'Administrator' : 'Student'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={proceedToDashboard} 
+              className="w-full" 
+              size="lg"
+            >
+              Continue to Dashboard
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                // Sign out current user and allow new login
+                await logout();
+                setEmail('');
+                setPassword('');
+                setStudentId('');
+                setIsRegistering(false);
+              }} 
+              className="w-full"
+            >
+              Sign in as Different User
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleStudentAuth = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,9 +6,10 @@ import StudentDashboard from '@/components/student/StudentDashboard';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, showLoginFirst } = useAuth();
 
-  if (!isAuthenticated) {
+  // Always show login form first, even if user is authenticated
+  if (!isAuthenticated || showLoginFirst) {
     return <LoginForm />;
   }
 

@@ -18,9 +18,11 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isConfigured: boolean;
+  showLoginFirst: boolean;
   login: (email: string, password: string, expectedRole?: 'student' | 'admin') => Promise<void>;
   register: (email: string, password: string, role: 'student' | 'admin', studentId?: string) => Promise<void>;
   logout: () => Promise<void>;
+  proceedToDashboard: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +32,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [role, setRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
+  const [showLoginFirst, setShowLoginFirst] = useState(true);
 
   useEffect(() => {
     // Check if Firebase is properly configured
@@ -128,6 +131,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     await signOut(auth);
+    // Reset to show login first when user logs out
+    setShowLoginFirst(true);
+  };
+
+  const proceedToDashboard = () => {
+    setShowLoginFirst(false);
   };
 
   return (
@@ -138,9 +147,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       loading,
       isConfigured,
+      showLoginFirst,
       login, 
       register,
-      logout 
+      logout,
+      proceedToDashboard
     }}>
       {children}
     </AuthContext.Provider>
