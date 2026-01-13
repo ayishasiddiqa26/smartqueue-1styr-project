@@ -6,8 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileUpload from './FileUpload';
 import PrintOptions from './PrintOptions';
 import QueueStatus from './QueueStatus';
+import NotificationStatus from './NotificationStatus';
 import PaymentDialog from './PaymentDialog';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Priority, PrintColor, TIME_SLOTS } from '@/types/printJob';
@@ -16,6 +18,9 @@ const StudentDashboard: React.FC = () => {
   const { userId, user } = useAuth();
   const { addJob, getJobsByStudent, updateJobPayment, isLoading, forceRefresh, manualFetchJobs } = usePrintQueue();
   const { toast } = useToast();
+  
+  // Initialize notification system
+  useNotifications();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedFilePageCount, setSelectedFilePageCount] = useState<number>(0);
@@ -225,6 +230,11 @@ const StudentDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="status">
+          {/* Notification Status */}
+          <div className="mb-4">
+            <NotificationStatus />
+          </div>
+          
           <QueueStatus 
             jobs={myJobs} 
             isLoading={isLoading} 
