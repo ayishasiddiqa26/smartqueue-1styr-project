@@ -5,13 +5,22 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { calculatePrinterStatus, PrinterStatus } from '@/lib/geminiAI';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
+import { useAuth } from '@/contexts/AuthContext';
 
-const AIStatus: React.FC = () => {
+interface AIStatusProps {
+  showDetailedInsights?: boolean;
+}
+
+const AIStatus: React.FC<AIStatusProps> = ({ showDetailedInsights = false }) => {
   const { getAllJobs } = usePrintQueue();
+  const { role } = useAuth();
   const [printerStatus, setPrinterStatus] = useState<{
     printer1: PrinterStatus;
     printer2: PrinterStatus;
   } | null>(null);
+
+  // Show detailed insights for admin or when explicitly requested
+  const showDetails = showDetailedInsights || role === 'admin';
 
   useEffect(() => {
     // Update printer status based on current jobs
@@ -59,6 +68,44 @@ const AIStatus: React.FC = () => {
     return 'destructive';
   };
 
+  // Simple view for students - just shows printer assignments
+  if (!showDetails) {
+    return (
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            AI Printer Assignment
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <Printer className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+              <div className="font-medium text-sm text-blue-900">Printer 1</div>
+              <div className="text-xs text-blue-700 mt-1">
+                {printer1.currentJobs} jobs queued
+              </div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
+              <Printer className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              <div className="font-medium text-sm text-green-900">Printer 2</div>
+              <div className="text-xs text-green-700 mt-1">
+                {printer2.currentJobs} jobs queued
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 text-center">
+            <p className="text-xs text-muted-foreground">
+              Your job will be automatically assigned to the optimal printer
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Detailed view for admins - shows full AI insights and printer optimization
   return (
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
