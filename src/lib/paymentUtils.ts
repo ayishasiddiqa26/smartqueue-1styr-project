@@ -3,6 +3,22 @@
 
 import { PrintColor } from '@/types/printJob';
 
+export type PaymentMethod = 'wallet' | 'card' | 'pay_later';
+
+export interface PaymentDetails {
+  method: PaymentMethod;
+  amount: number;
+  jobId: string;
+  description: string;
+}
+
+export interface PaymentResult {
+  success: boolean;
+  message: string;
+  transactionId?: string;
+  remainingBalance?: number;
+}
+
 export interface PaymentCalculation {
   baseAmount: number;
   colorSurcharge: number;
@@ -51,22 +67,39 @@ export const generateDemoPaymentId = (): string => {
   return `DEMO_${timestamp}_${random}`.toUpperCase();
 };
 
-// Simulate payment processing with random success/failure
-export const simulatePaymentProcessing = async (amount: number): Promise<{
-  success: boolean;
-  paymentId?: string;
-  error?: string;
-}> => {
+// Simulate payment processing with different methods
+export const simulatePaymentProcessing = async (
+  amount: number, 
+  method: PaymentMethod = 'card'
+): Promise<PaymentResult> => {
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
 
-  // 95% success rate for demo purposes
+  if (method === 'pay_later') {
+    return {
+      success: true,
+      message: 'Payment deferred - Pay later option selected',
+      transactionId: `PAY_LATER_${generateDemoPaymentId()}`,
+    };
+  }
+
+  if (method === 'wallet') {
+    // Wallet payment success depends on balance (handled by wallet hook)
+    return {
+      success: true,
+      message: 'Payment successful via wallet',
+      transactionId: `WALLET_${generateDemoPaymentId()}`,
+    };
+  }
+
+  // Card payment - 95% success rate for demo purposes
   const success = Math.random() > 0.05;
 
   if (success) {
     return {
       success: true,
-      paymentId: generateDemoPaymentId(),
+      message: 'Payment successful via card',
+      transactionId: generateDemoPaymentId(),
     };
   } else {
     const errors = [
@@ -77,7 +110,7 @@ export const simulatePaymentProcessing = async (amount: number): Promise<{
     ];
     return {
       success: false,
-      error: errors[Math.floor(Math.random() * errors.length)],
+      message: errors[Math.floor(Math.random() * errors.length)],
     };
   }
 };

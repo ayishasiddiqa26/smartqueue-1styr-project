@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, AlertTriangle, CheckCircle, Loader2, IndianRupee } from 'lucide-react';
+import { CreditCard, Wallet, Clock, AlertTriangle, CheckCircle, Loader2, IndianRupee } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { PrintJob } from '@/types/printJob';
-import { calculatePaymentAmount, simulatePaymentProcessing } from '@/lib/paymentUtils';
+import { calculatePaymentAmount, simulatePaymentProcessing, PaymentMethod, PaymentResult } from '@/lib/paymentUtils';
+import { useWallet } from '@/hooks/useWallet';
 
 interface PaymentDialogProps {
   job: PrintJob;
@@ -27,11 +30,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   onPaymentSuccess,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentResult, setPaymentResult] = useState<{
-    success: boolean;
-    paymentId?: string;
-    error?: string;
-  } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet');
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const { balance, deductFromWallet, hasSufficientBalance } = useWallet();
 
   const payment = calculatePaymentAmount(
     job.pageCount || 1,
@@ -45,20 +46,52 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setPaymentResult(null);
 
     try {
-      const result = await simulatePaymentProcessing(payment.totalAmount);
+      let result: PaymentResult;
+
+      if (paymentMethod === 'wallet') {
+        if (!hasSufficientBalance(payment.totalAmount)) {
+          result = {
+            success: false,
+            message: `Insufficient wallet balance. You have ₹${balance}, but need ₹${payment.totalAmount}`,
+          };
+        } else {
+          const walletSuccess = await deductFromWallet(
+            payment.totalAmount,
+            `Print job payment - ${job.fileName}`,
+            job.id
+          );
+          
+          if (walletSuccess) {
+            result = {
+              success: true,
+              message: 'Payment successful via wallet',
+              transactionId: `WALLET_${Date.now()}`,
+              remainingBalance: balance - payment.totalAmount
+            };
+          } else {
+            result = {
+              success: false,
+              message: 'Wallet payment failed. Please try again.',
+            };
+          }
+        }
+      } else {
+        result = await simulatePaymentProcessing(payment.totalAmount, paymentMethod);
+      }
+
       setPaymentResult(result);
 
-      if (result.success && result.paymentId) {
+      if (result.success && result.transactionId) {
         // Wait a moment to show success, then call parent
         setTimeout(() => {
-          onPaymentSuccess(result.paymentId!, payment.totalAmount);
+          onPaymentSuccess(result.transactionId!, payment.totalAmount);
           onClose();
         }, 2000);
       }
     } catch (error) {
       setPaymentResult({
         success: false,
-        error: 'Payment processing failed',
+        message: 'Payment processing failed',
       });
     } finally {
       setIsProcessing(false);
@@ -68,8 +101,37 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const handleClose = () => {
     if (!isProcessing) {
       setPaymentResult(null);
+      setPaymentMethod('wallet');
       onClose();
     }
+  };
+
+  const getPaymentMethodIcon = (method: PaymentMethod) => {
+    switch (method) {
+      case 'wallet':
+        return <Wallet className="h-4 w-4" />;
+      case 'card':
+        return <CreditCard className="h-4 w-4" />;
+      case 'pay_later':
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method: PaymentMethod) => {
+    switch (method) {
+      case 'wallet':
+        return `Wallet (₹${balance} available)`;
+      case 'card':
+        return 'Credit/Debit Card';
+      case 'pay_later':
+        return 'Pay Later';
+    }
+  };
+
+  const isPaymentDisabled = () => {
+    if (isProcessing || paymentResult?.success) return true;
+    if (paymentMethod === 'wallet' && !hasSufficientBalance(payment.totalAmount)) return true;
+    return false;
   };
 
   return (
@@ -78,12 +140,44 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Demo Payment Required
+            Payment Required
           </DialogTitle>
           <DialogDescription>
             Complete payment to prioritize your print job in the queue
           </DialogDescription>
         </DialogHeader>
+
+        {/* Payment Method Selection */}
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm">Select Payment Method</h4>
+          <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="wallet" id="wallet" />
+              <Label htmlFor="wallet" className="flex items-center gap-2 cursor-pointer">
+                {getPaymentMethodIcon('wallet')}
+                {getPaymentMethodLabel('wallet')}
+                {!hasSufficientBalance(payment.totalAmount) && (
+                  <Badge variant="destructive" className="text-xs">Insufficient Balance</Badge>
+                )}
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="card" id="card" />
+              <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer">
+                {getPaymentMethodIcon('card')}
+                {getPaymentMethodLabel('card')}
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="pay_later" id="pay_later" />
+              <Label htmlFor="pay_later" className="flex items-center gap-2 cursor-pointer">
+                {getPaymentMethodIcon('pay_later')}
+                {getPaymentMethodLabel('pay_later')}
+                <Badge variant="outline" className="text-xs">No Priority</Badge>
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
 
         {/* Job Details */}
         <div className="space-y-3">
@@ -142,13 +236,19 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               {paymentResult.success ? (
                 <>
                   <strong>Payment Successful!</strong><br />
-                  Payment ID: {paymentResult.paymentId}<br />
-                  Your job will be prioritized in the queue.
+                  Transaction ID: {paymentResult.transactionId}<br />
+                  {paymentResult.remainingBalance !== undefined && (
+                    <>Wallet Balance: ₹{paymentResult.remainingBalance}<br /></>
+                  )}
+                  {paymentMethod === 'pay_later' ? 
+                    'Job submitted - payment can be completed later.' :
+                    'Your job will be prioritized in the queue.'
+                  }
                 </>
               ) : (
                 <>
                   <strong>Payment Failed</strong><br />
-                  {paymentResult.error}
+                  {paymentResult.message}
                 </>
               )}
             </AlertDescription>
@@ -167,7 +267,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </Button>
           <Button
             onClick={handlePayment}
-            disabled={isProcessing || paymentResult?.success}
+            disabled={isPaymentDisabled()}
             className="flex-1"
           >
             {isProcessing ? (
@@ -178,12 +278,17 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
             ) : paymentResult?.success ? (
               <>
                 <CheckCircle className="h-4 w-4 mr-2" />
-                Paid
+                {paymentMethod === 'pay_later' ? 'Submitted' : 'Paid'}
               </>
             ) : (
               <>
-                <IndianRupee className="h-4 w-4 mr-2" />
-                Pay {payment.totalAmount}
+                {getPaymentMethodIcon(paymentMethod)}
+                <span className="ml-2">
+                  {paymentMethod === 'pay_later' 
+                    ? 'Submit Job' 
+                    : `Pay ₹${payment.totalAmount}`
+                  }
+                </span>
               </>
             )}
           </Button>

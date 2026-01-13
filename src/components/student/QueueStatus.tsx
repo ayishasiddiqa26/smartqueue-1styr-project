@@ -227,7 +227,7 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRe
                   <AlertDescription className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-base font-semibold text-blue-700 mb-1">
-                        💳 Payment Available
+                        💳 Payment Required
                       </p>
                       <p className="text-sm text-blue-600 mb-1">
                         Complete payment to join the priority queue
