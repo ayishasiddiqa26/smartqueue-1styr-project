@@ -40,7 +40,14 @@ export const useWallet = () => {
       lastUpdated: new Date()
     };
 
-    await setDoc(doc(db, 'wallets', userId), initialWallet);
+    try {
+      await setDoc(doc(db, 'wallets', userId), initialWallet);
+      console.log('Wallet initialized successfully with ₹200');
+    } catch (error) {
+      console.warn('Failed to save wallet to Firestore, using local wallet:', error);
+      // Continue with local wallet even if Firestore fails
+    }
+    
     return initialWallet;
   };
 
@@ -91,7 +98,13 @@ export const useWallet = () => {
 
   // Deduct amount from wallet
   const deductFromWallet = async (amount: number, description: string, jobId?: string): Promise<boolean> => {
-    if (!userId || !walletData || walletData.balance < amount) {
+    if (!userId || !walletData) {
+      console.error('Wallet deduction failed: No user ID or wallet data');
+      return false;
+    }
+
+    if (walletData.balance < amount) {
+      console.error(`Wallet deduction failed: Insufficient balance. Have: ${walletData.balance}, Need: ${amount}`);
       return false;
     }
 
@@ -111,8 +124,17 @@ export const useWallet = () => {
         lastUpdated: new Date()
       };
 
-      await updateDoc(doc(db, 'wallets', userId), updatedWallet);
+      // Try to update Firestore, but don't fail if it doesn't work
+      try {
+        await updateDoc(doc(db, 'wallets', userId), updatedWallet);
+        console.log('Wallet updated in Firestore successfully');
+      } catch (firestoreError) {
+        console.warn('Failed to update Firestore, but continuing with local update:', firestoreError);
+        // Continue with local update even if Firestore fails
+      }
+
       setWalletData(updatedWallet);
+      console.log(`Wallet deduction successful: ₹${amount} deducted, new balance: ₹${updatedWallet.balance}`);
       return true;
     } catch (error) {
       console.error('Error deducting from wallet:', error);

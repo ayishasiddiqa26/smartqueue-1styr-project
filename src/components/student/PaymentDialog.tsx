@@ -32,7 +32,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wallet');
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
-  const { balance, deductFromWallet, hasSufficientBalance } = useWallet();
+  const { balance, deductFromWallet, hasSufficientBalance, loading: walletLoading } = useWallet();
 
   const payment = calculatePaymentAmount(
     job.pageCount || 1,
@@ -49,6 +49,8 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
       let result: PaymentResult;
 
       if (paymentMethod === 'wallet') {
+        console.log(`Attempting wallet payment: Amount: ₹${payment.totalAmount}, Balance: ₹${balance}`);
+        
         if (!hasSufficientBalance(payment.totalAmount)) {
           result = {
             success: false,
@@ -68,10 +70,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               transactionId: `WALLET_${Date.now()}`,
               remainingBalance: balance - payment.totalAmount
             };
+            console.log('Wallet payment successful');
           } else {
+            console.error('Wallet deduction failed');
             result = {
               success: false,
-              message: 'Wallet payment failed. Please try again.',
+              message: 'Wallet payment failed. Please check your balance and try again.',
             };
           }
         }
@@ -120,6 +124,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const getPaymentMethodLabel = (method: PaymentMethod) => {
     switch (method) {
       case 'wallet':
+        if (walletLoading) return 'Wallet (Loading...)';
         return `Wallet (₹${balance} available)`;
       case 'card':
         return 'Credit/Debit Card';
@@ -130,7 +135,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   const isPaymentDisabled = () => {
     if (isProcessing || paymentResult?.success) return true;
-    if (paymentMethod === 'wallet' && !hasSufficientBalance(payment.totalAmount)) return true;
+    if (paymentMethod === 'wallet') {
+      if (walletLoading) return true; // Disable if wallet is still loading
+      if (!hasSufficientBalance(payment.totalAmount)) return true;
+    }
     return false;
   };
 
