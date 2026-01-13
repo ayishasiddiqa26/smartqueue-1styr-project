@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, FileText } from 'lucide-react';
+import { Send, FileText, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,9 +7,11 @@ import FileUpload from './FileUpload';
 import PrintOptions from './PrintOptions';
 import QueueStatus from './QueueStatus';
 import NotificationStatus from './NotificationStatus';
+import NotificationTab from './NotificationTab';
 import PaymentDialog from './PaymentDialog';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useNotificationHistory } from '@/hooks/useNotificationHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Priority, PrintColor, TIME_SLOTS } from '@/types/printJob';
@@ -18,6 +20,7 @@ const StudentDashboard: React.FC = () => {
   const { userId, user } = useAuth();
   const { addJob, getJobsByStudent, updateJobPayment, isLoading, forceRefresh, manualFetchJobs } = usePrintQueue();
   const { toast } = useToast();
+  const { unreadCount } = useNotificationHistory();
   
   // Initialize notification system
   useNotifications();
@@ -162,7 +165,7 @@ const StudentDashboard: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-6 max-w-2xl">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger value="submit" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Submit Print
@@ -172,6 +175,15 @@ const StudentDashboard: React.FC = () => {
             {myJobs.filter(j => j.status !== 'collected').length > 0 && (
               <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs w-5 h-5 rounded-full flex items-center justify-center">
                 {myJobs.filter(j => j.status !== 'collected').length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="flex items-center gap-2 relative">
+            <Bell className="h-4 w-4" />
+            Notifications
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadCount}
               </span>
             )}
           </TabsTrigger>
@@ -244,6 +256,10 @@ const StudentDashboard: React.FC = () => {
             }}
             onPaymentClick={setPaymentDialogJob}
           />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationTab />
         </TabsContent>
       </Tabs>
 

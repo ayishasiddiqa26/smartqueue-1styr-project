@@ -2,13 +2,20 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePrintQueue } from './usePrintQueue';
-import { notifyStudentJobReady, initializeNotifications } from '@/lib/notificationUtils';
+import { notifyStudentJobReady, initializeNotifications, setNotificationHistoryCallback } from '@/lib/notificationUtils';
+import { useNotificationHistory } from './useNotificationHistory';
 import { PrintJob } from '@/types/printJob';
 
 export const useNotifications = () => {
   const { isAuthenticated, role, userId } = useAuth();
   const { getAllJobs } = usePrintQueue();
+  const { addNotification } = useNotificationHistory();
   const previousJobsRef = useRef<PrintJob[]>([]);
+
+  useEffect(() => {
+    // Set up notification history callback
+    setNotificationHistoryCallback(addNotification);
+  }, [addNotification]);
 
   useEffect(() => {
     // Initialize notifications when component mounts

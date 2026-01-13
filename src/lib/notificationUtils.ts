@@ -9,6 +9,13 @@ export interface NotificationData {
   timestamp: Date;
 }
 
+// Global notification history callback
+let addToHistoryCallback: ((notification: any) => void) | null = null;
+
+export const setNotificationHistoryCallback = (callback: (notification: any) => void) => {
+  addToHistoryCallback = callback;
+};
+
 // Request notification permission from browser
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!('Notification' in window)) {
@@ -98,6 +105,18 @@ export const sendVisualAlert = (data: NotificationData) => {
 // Main notification function - sends all types
 export const notifyStudentJobReady = async (data: NotificationData) => {
   console.log('📧 Sending notification to student:', data);
+
+  // Add to notification history
+  if (addToHistoryCallback) {
+    addToHistoryCallback({
+      jobId: data.jobId,
+      fileName: data.fileName,
+      qrCode: data.qrCode,
+      timestamp: data.timestamp,
+      type: 'job_ready',
+      message: `🎉 Your print job "${data.fileName}" is ready for pickup!`
+    });
+  }
 
   // Send toast notification (always works)
   sendToastNotification(data);
