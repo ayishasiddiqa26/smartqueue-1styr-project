@@ -208,23 +208,14 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRe
             </CardHeader>
 
             <CardContent className="pt-0">
-              {/* AI Reasoning */}
-              {job.aiReasoning && (
+              {/* Simple AI Assignment */}
+              {job.assignedPrinter && (
                 <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <Bot className="h-4 w-4 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-primary">AI Assignment Reasoning</p>
-                      <p className="text-sm text-primary/80 mt-1">{job.aiReasoning}</p>
-                      {job.aiConfidence && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className="text-xs text-muted-foreground">Confidence:</span>
-                          <Badge variant="outline" className="text-xs">
-                            {job.aiConfidence}%
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-medium text-primary">
+                      Your job is assigned to {job.assignedPrinter === 'printer1' ? 'Printer 1' : 'Printer 2'}
+                    </p>
                   </div>
                 </div>
               )}
@@ -394,7 +385,7 @@ const QueueStatus: React.FC<QueueStatusProps> = ({ jobs, isLoading = false, onRe
                           <span className="font-bold text-lg">#{job.queuePosition}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">AI Est. Wait</span>
+                          <span className="text-muted-foreground">AI Estimated Wait Time</span>
                           <span className="font-medium flex items-center gap-1">
                             <Bot className="h-3 w-3 text-primary" />
                             {job.aiEstimatedWait || job.estimatedWait} min
