@@ -55,14 +55,18 @@ export const useWallet = () => {
   useEffect(() => {
     const loadWallet = async () => {
       if (!userId) {
+        console.log('No userId, skipping wallet load');
         setLoading(false);
         return;
       }
+
+      console.log('Loading wallet for user:', userId);
 
       try {
         const walletDoc = await getDoc(doc(db, 'wallets', userId));
         
         if (walletDoc.exists()) {
+          console.log('Wallet found in Firestore');
           const data = walletDoc.data() as WalletData;
           // Convert timestamp strings back to Date objects
           const processedData = {
@@ -73,18 +77,29 @@ export const useWallet = () => {
               timestamp: t.timestamp.toDate ? t.timestamp.toDate() : new Date(t.timestamp)
             }))
           };
+          console.log('Wallet data loaded:', { balance: processedData.balance, transactions: processedData.transactions.length });
           setWalletData(processedData);
         } else {
+          console.log('No wallet found, initializing new wallet');
           // Initialize wallet for new user
           const newWallet = await initializeWallet(userId);
           setWalletData(newWallet);
         }
       } catch (error) {
         console.error('Error loading wallet:', error);
+        console.log('Creating fallback wallet with ₹200');
         // Fallback to local initialization
         const fallbackWallet: WalletData = {
           balance: 200,
-          transactions: [],
+          transactions: [
+            {
+              id: `fallback_${Date.now()}`,
+              type: 'credit',
+              amount: 200,
+              description: 'Fallback wallet initialization',
+              timestamp: new Date()
+            }
+          ],
           lastUpdated: new Date()
         };
         setWalletData(fallbackWallet);
@@ -174,7 +189,9 @@ export const useWallet = () => {
 
   // Check if wallet has sufficient balance
   const hasSufficientBalance = (amount: number): boolean => {
-    return walletData ? walletData.balance >= amount : false;
+    const sufficient = walletData ? walletData.balance >= amount : false;
+    console.log(`Balance check: Need ₹${amount}, Have ₹${walletData?.balance || 0}, Sufficient: ${sufficient}`);
+    return sufficient;
   };
 
   return {

@@ -142,12 +142,21 @@ const StudentDashboard: React.FC = () => {
     if (!paymentDialogJob) return;
     
     try {
-      await updateJobPayment(paymentDialogJob.id, paymentId, amount);
-      
-      toast({
-        title: "Payment Successful! ✅",
-        description: `Your job has been prioritized in the queue. Payment ID: ${paymentId}`,
-      });
+      // Only update payment if amount > 0 (actual payment made)
+      if (amount > 0) {
+        await updateJobPayment(paymentDialogJob.id, paymentId, amount);
+        
+        toast({
+          title: "Payment Successful! ✅",
+          description: `Your job has been prioritized in the queue. Payment ID: ${paymentId}`,
+        });
+      } else {
+        // Pay Later - just show job submitted message
+        toast({
+          title: "Job Submitted! 📄",
+          description: "Your job has been added to the queue. You can pay later for priority processing.",
+        });
+      }
       
       setPaymentDialogJob(null);
       forceRefresh();
