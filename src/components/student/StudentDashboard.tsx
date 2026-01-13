@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileUpload from './FileUpload';
 import PrintOptions from './PrintOptions';
 import QueueStatus from './QueueStatus';
-import NotificationStatus from './NotificationStatus';
 import NotificationTab from './NotificationTab';
 import PaymentDialog from './PaymentDialog';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
@@ -242,11 +241,6 @@ const StudentDashboard: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="status">
-          {/* Notification Status */}
-          <div className="mb-4">
-            <NotificationStatus />
-          </div>
-          
           <QueueStatus 
             jobs={myJobs} 
             isLoading={isLoading} 
