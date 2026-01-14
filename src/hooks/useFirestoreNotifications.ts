@@ -48,8 +48,6 @@ export const useFirestoreNotifications = () => {
     const q = query(
       notificationsRef,
       where('userId', '==', userId),
-      where('deleted', '!=', true),
-      orderBy('deleted'),
       orderBy('timestamp', 'desc')
     );
 
@@ -61,6 +59,9 @@ export const useFirestoreNotifications = () => {
           
           querySnapshot.forEach((doc) => {
             const data = doc.data();
+            // Skip deleted notifications
+            if (data.deleted === true) return;
+            
             notificationsList.push({
               id: doc.id,
               userId: data.userId,
