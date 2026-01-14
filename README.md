@@ -30,30 +30,37 @@ A modern, intelligent web application for managing print queues in educational i
 - **Explainable Decisions**: Clear reasoning for all AI recommendations
 
 ### 💳 Payment System (Demo)
+- **Wallet System**: ₹200 initial demo balance for all users
+- **Multiple Payment Methods**: Wallet, Card, or Pay Later options
+- **Real-time Balance**: Live wallet balance updates with transaction history
 - **Simulated Payments**: Safe demo payment system for hackathons
 - **Priority Queue**: Paid jobs receive higher priority processing
 - **Flexible Pricing**: ₹2 B&W, ₹5 Color, ₹5 Urgent fee
 - **Professional UX**: Clean payment interface without threatening language
+- **Secure Transactions**: Firestore-based wallet with proper validation
 
 ### 🔔 Notification System
-- **Real-time Alerts**: Instant notifications when jobs are ready for pickup
+- **Real-time Firestore Notifications**: Instant delivery when jobs are ready
 - **Multi-channel Delivery**: Browser notifications, toast messages, and visual alerts
-- **Notification History**: Dedicated tab with persistent notification storage
+- **Notification History**: Dedicated tab with persistent Firestore storage
 - **Smart Management**: Mark as read/unread, clear all, and unread count badges
-- **Secure & Private**: User-specific notifications with proper authentication
+- **Secure & Private**: User-specific notifications with Firestore security rules
 - **Professional Interface**: Clean notification cards with job details and timestamps
+- **Admin Creation**: Automatic notification creation when jobs marked as printed
+- **Real-time Updates**: Live notification count updates without page refresh
 
 ## 🛠 Tech Stack
 
 - **Frontend**: React + TypeScript + Vite
 - **UI Framework**: Tailwind CSS + shadcn/ui components
-- **Backend**: Firebase (Auth, Firestore, Storage)
+- **Backend**: Firebase (Auth, Firestore)
+- **Real-time Database**: Firestore with real-time listeners
 - **AI Integration**: Google Gemini AI (simulated for demo)
 - **QR Processing**: @zxing/library for code scanning
-- **Notifications**: Browser Notification API + Custom toast system
+- **Notifications**: Firestore real-time + Browser Notification API + Custom toast system
 - **Date Handling**: date-fns for timestamp formatting
-- **State Management**: React hooks with real-time Firestore
-- **Security**: Environment variables and secure Firebase rules
+- **State Management**: React hooks with real-time Firestore synchronization
+- **Security**: Environment variables, Firestore security rules, and proper data isolation
 
 ## 📋 Setup Instructions
 
@@ -102,11 +109,21 @@ VITE_PAYMENT_SIMULATION=true
 1. Create a Firebase project at [Firebase Console](https://console.firebase.google.com)
 2. Enable Authentication (Email/Password)
 3. Create Firestore Database
-4. Deploy security rules:
+4. Deploy security rules and indexes:
 
 ```bash
-firebase deploy --only firestore:rules
+# Deploy Firestore rules (includes notifications and wallet permissions)
+firebase deploy --only firestore
+
+# Or deploy everything
+firebase deploy
 ```
+
+**Important Firestore Rules**: The project includes comprehensive security rules for:
+- User authentication and authorization
+- Wallet subcollection (user-specific access)
+- Notifications collection (user-specific read, admin-only create)
+- Print jobs collection (authenticated access with admin delete)
 
 ### 4. Run the Application
 
@@ -134,32 +151,59 @@ firebase deploy --only hosting
 1. **Upload Document**: Drag & drop PDF files (auto page counting)
 2. **Configure Options**: Select copies, color, priority, pickup time
 3. **Add Instructions**: Optional special instructions for admin
-4. **Payment**: Complete simulated payment for priority processing
+4. **Choose Payment Method**: 
+   - **Wallet**: Use ₹200 demo balance (instant deduction)
+   - **Card**: Simulated card payment
+   - **Pay Later**: Submit without payment (no priority)
 5. **Track Status**: Monitor real-time queue position and AI estimates
-6. **Receive Notifications**: Get instant alerts when jobs are ready
+6. **Receive Notifications**: Get instant Firestore-based alerts when jobs are ready
 7. **Manage Notifications**: View history and manage alerts in dedicated tab
+8. **Pickup**: Use 4-digit code or QR code for secure pickup verification
 
 ### Admin Workflow
 
 1. **Monitor Queue**: View jobs by status, priority, and pickup slots
 2. **AI Insights**: Review AI recommendations and printer assignments
 3. **Process Jobs**: Progress jobs through waiting → printing → printed
-4. **Secure Pickup**: Verify student identity via QR scan or 4-digit code
-5. **Analytics**: Monitor printer loads and queue performance
+4. **Auto-Notify Students**: System automatically creates Firestore notifications when marking jobs as printed
+5. **Secure Pickup**: Verify student identity via QR scan or 4-digit code
+6. **Analytics**: Monitor printer loads and queue performance
 
 ## 🔒 Security & Environment Variables
 
 ### Environment Variable Security
-- All sensitive credentials stored in `.env` file
-- `.env` file is gitignored and never committed
-- Environment variables validated at runtime
-- Template file (`.env.example`) provided for setup
+- ✅ All sensitive credentials stored in `.env` file
+- ✅ `.env` file is gitignored and never committed
+- ✅ Environment variables validated at runtime
+- ✅ Template file (`.env.example`) provided for setup
+- ✅ No hardcoded API keys in source code
+- ✅ Comprehensive security verification performed
 
 ### Firebase Security
-- Role-based access control (student/admin)
-- Secure Firestore rules with proper validation
-- Authentication required for all operations
-- Input sanitization and validation
+- ✅ Role-based access control (student/admin)
+- ✅ Secure Firestore rules with proper validation
+- ✅ User-specific data isolation (wallet, notifications)
+- ✅ Authentication required for all operations
+- ✅ Admin-only operations properly enforced
+- ✅ Input sanitization and validation
+
+### Firestore Security Rules
+```javascript
+// Notifications - Students read their own, admins create
+match /notifications/{notificationId} {
+  allow read: if request.auth.uid == resource.data.userId;
+  allow update: if request.auth.uid == resource.data.userId;
+  allow create: if isAdmin();
+}
+
+// Wallet - User-specific access only
+match /users/{userId}/wallet/{walletDoc} {
+  allow read, write: if request.auth.uid == userId;
+}
+```
+
+### Security Verification
+See `SECURITY_VERIFICATION.md` for complete security audit report.
 
 ## 🏆 Hackathon Features
 
@@ -171,10 +215,12 @@ firebase deploy --only hosting
 
 ### Technical Highlights
 - **AI Integration**: Intelligent printer assignment and queue optimization
-- **Real-time Updates**: Live status tracking and notifications
-- **Notification System**: Multi-channel alerts with persistent history
+- **Real-time Updates**: Live status tracking with Firestore listeners
+- **Wallet System**: Demo wallet with ₹200 initial balance and transaction history
+- **Notification System**: Real-time Firestore notifications with instant delivery
 - **Scalable Architecture**: Production-ready code structure
-- **Security Best Practices**: Environment variables and secure authentication
+- **Security Best Practices**: Environment variables, Firestore rules, and data isolation
+- **TypeScript**: Full type safety throughout the application
 
 ## 🚀 Deployment
 
@@ -208,6 +254,7 @@ Set environment variables in your hosting platform:
 
 ### Real-time Notification Delivery
 - **Trigger**: Automatic when admin marks job as "printed"
+- **Firestore-Based**: Real-time listeners for instant delivery
 - **Browser Notifications**: Native OS notifications with sound
 - **Toast Messages**: In-app sliding notifications
 - **Visual Alerts**: Animated popup notifications with bounce effect
@@ -215,7 +262,7 @@ Set environment variables in your hosting platform:
 
 ### Notification Management
 - **Dedicated Tab**: Complete notification history interface
-- **Persistent Storage**: Last 50 notifications saved per user (localStorage)
+- **Firestore Storage**: Real-time synchronized across devices
 - **Read/Unread Status**: Visual indicators and click-to-mark-read
 - **Timestamp Display**: Relative time formatting ("2 minutes ago")
 - **Bulk Actions**: Mark all as read, clear all notifications
@@ -223,17 +270,64 @@ Set environment variables in your hosting platform:
 
 ### Notification Content
 ```
-🖨️ Print Job Ready!
-Your document "report.pdf" is ready for pickup.
-Use 4-digit code: 1234
+🎉 Print Job Ready!
+Your document "report.pdf" is ready for pickup!
+Use your 4-digit code: 1234
+Pickup Code: 1234
 2 minutes ago
 ```
 
 ### Security & Privacy
-- **User-specific**: Only shows notifications for authenticated student's jobs
+- **User-specific**: Firestore security rules ensure students only see their notifications
 - **Secure Validation**: Proper job ownership verification
-- **Local Storage**: User-scoped notification history
+- **Real-time Sync**: Instant updates across all devices
+- **Admin-Only Creation**: Only admins can create notifications
 - **No Sensitive Data**: Only essential pickup information included
+
+## 💰 Wallet System Features
+
+### Demo Wallet Implementation
+- **Initial Balance**: ₹200 demo balance for all new users
+- **Real-time Updates**: Live balance synchronization via Firestore
+- **Transaction History**: Complete record of all wallet transactions
+- **Secure Storage**: User-specific Firestore subcollection
+
+### Payment Methods
+1. **Wallet Payment**:
+   - Instant balance deduction
+   - Real-time balance updates
+   - Transaction history tracking
+   - Insufficient balance validation
+
+2. **Card Payment**:
+   - Simulated card processing
+   - Demo-safe for hackathons
+   - Professional payment flow
+
+3. **Pay Later**:
+   - Submit job without payment
+   - No priority queue access
+   - Can pay later for priority
+
+### Wallet Security
+- **User Isolation**: Each user has their own wallet subcollection
+- **Firestore Rules**: Strict access control (users can only access their own wallet)
+- **Balance Validation**: Server-side balance checks before deduction
+- **Transaction Integrity**: Atomic operations for balance updates
+
+### Wallet Structure
+```
+users/{userId}/wallet/data
+  - balance: number
+  - transactions: array
+    - id: string
+    - type: 'credit' | 'debit'
+    - amount: number
+    - description: string
+    - timestamp: Date
+    - jobId?: string
+  - lastUpdated: Date
+```
 
 ## 🤝 Contributing
 
@@ -252,6 +346,27 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Issues**: Create an issue in the GitHub repository
 - **Documentation**: Check the `/docs` folder for detailed guides
 - **Demo**: Live demo available at https://smartqueue-e53e2.web.app
+
+## 📝 Recent Updates
+
+### Latest Fixes (January 2026)
+✅ **Wallet Payment System**: Fixed TypeScript types and Firestore integration for reliable wallet payments  
+✅ **Student Notifications**: Implemented real-time Firestore notifications with instant delivery  
+✅ **Firestore Security Rules**: Added comprehensive permissions for notifications and wallet collections  
+✅ **Security Verification**: Complete audit ensuring no credentials in source code  
+✅ **Query Optimization**: Simplified notification queries for better performance  
+
+### Documentation Added
+- `WALLET_NOTIFICATION_FIXES.md` - Detailed fix documentation
+- `FIRESTORE_RULES_FIX.md` - Security rules implementation guide
+- `SECURITY_VERIFICATION.md` - Complete security audit report
+
+### Key Improvements
+- Real-time wallet balance synchronization
+- Instant notification delivery when jobs are printed
+- Proper Firestore security rules enforcement
+- Enhanced error handling and user feedback
+- Professional UI/UX suitable for hackathon judges
 
 ## 🎉 Acknowledgments
 
